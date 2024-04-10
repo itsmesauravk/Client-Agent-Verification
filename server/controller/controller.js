@@ -49,7 +49,7 @@ const loginAgent = async (req, res) => {
         const agent = await Agent.findOne({ email });
         if (!agent) return res.status(404).json({ message: "Agent not found" });
         if (password === agent.password) {
-            const token = jwt.sign({ email: agent.email, fullname:agent.fullname }, process.env.JWT_SECRET, {expiresIn: '1h'});
+            const token = jwt.sign({ email: agent.email, fullname:agent.fullname }, process.env.JWT_SECRET, {expiresIn: '1d'});
             res.status(200).json({"success":true, token:token});
         } else {
             res.status(401).json({ message: "Incorrect password" });
@@ -122,22 +122,34 @@ const createRequest = async (req, res) => {
 
 
 //to show the requests done by user to the particular agent
-
 const showUserRequests = async (req, res) => {
     try {
-        
         const token = req.headers.authorization;
-        // console.log(token)
-        
         const agentData = jwt.verify(token.split(' ')[1], process.env.JWT_SECRET);
         if (!agentData) return res.status(404).json({ message: "Agent not found" });
+
         const agent = await Agent.findOne({ email: agentData.email });
+        if (!agent) return res.status(404).json({ message: "Agent not found" });
+
         const requests = await VerifyUser.find({ agent: agent._id });
-        res.status(200).json({success:true, data:requests});
+        if (requests.length === 0) {
+            return res.status(404).json({ message: "No requests found for this agent" });
+        }
+
+        const userData = [];
+        for (const request of requests) {
+            const user = await User.findById(request.user);
+            if (user) {
+                userData.push(user);
+            }
+        }
+
+        res.status(200).json({ success: true, requests:requests, userinfo : userData});
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 }
+
 
 module.exports = {
     addUser,
