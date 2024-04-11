@@ -23,7 +23,7 @@ const RequestSchema = new mongoose.Schema({
     ,
     status: {
         type: String,
-        default: 'Pending'
+        default: 'Not Verified'
     }
 },
 {timestamps: true}

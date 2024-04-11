@@ -104,12 +104,19 @@ const createRequest = async (req, res) => {
         const verifyAgent = await Agent.findOne({ email: agentemail });
         if (!verifyUser ) return res.status(404).json({success:false,message: "User or Agent not found" });
         if (!verifyAgent ) return res.status(404).json({ success:false,message: "User or Agent not found" });
+        
+        //checking request already exist or not
+        const checkRequest = await VerifyUser.findOne({ user: verifyUser._id });
+        if (checkRequest) return res.status(404).json({ success:false,message: "Request already exist" });
 
         const newRequest = new VerifyUser({ 
             user: verifyUser._id,
             agent: verifyAgent._id,
             data: [{ age: age, favoriteFilm: favflim }]  
         });
+        const updatedUserStatus = await User.findOneAndUpdate({ email: useremail }, { verified: "pending" });
+        if (!updatedUserStatus) return res.status(404).json({ message: "User not found" });
+
         await newRequest.save();
         res.status(201).json({success:true, message:"Successfully requested"});
     } catch (error) {
@@ -139,6 +146,7 @@ const showUserRequests = async (req, res) => {
         const userData = [];
         for (const request of requests) {
             const user = await User.findById(request.user);
+            
             if (user) {
                 userData.push(user);
             }
@@ -151,6 +159,44 @@ const showUserRequests = async (req, res) => {
 }
 
 
+// accepting or rejecting the user request
+const acceptRejectHandler = async (req, res) => {
+    try {
+        const { action, userId, age, flim } = req.body;
+        console.log(action, userId, age, flim);
+        console.log(userId)
+        //for agent data
+        const token = req.headers.authorization;
+        const agentData = jwt.verify(token.split(' ')[1], process.env.JWT_SECRET);
+        if (!agentData) return res.status(404).json({ message: "Agent not found" });
+
+        const agent = await Agent.findOne({ email: agentData.email });
+        if (!agent) return res.status(404).json({ message: "Agent not found" });
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const request = await VerifyUser.findOne({ user: user._id, agent: agent._id });
+        if (!request) return res.status(404).json({ message: "Request not found" });
+
+        if (action === 'verify') {
+            const updatedVerifyUser = await User.findByIdAndUpdate({ _id: user._id }, { verified: "verified" });
+            const updatedRequest = await VerifyUser.findByIdAndUpdate({ _id: request._id }, { status: 'verified' });
+            const updatUserProfile = await User.findByIdAndUpdate({ _id: user._id }, { age: age, favflim: flim });
+            if (!updatedVerifyUser || !updatedRequest || !updatUserProfile ) return res.status(404).json({ message: "User not found" });
+            return res.status(200).json({ success: true, message: "User verified successfully" });
+        } else {
+            const updatedRejectRequest = await VerifyUser.findByIdAndUpdate({ _id: request._id }, { status: 'rejected' });
+            if (!updatedRejectRequest) return res.status(404).json({ message: "Request not found" });
+            return res.status(200).json({ success: true, message: "Request rejected successfully" });        
+        }
+
+       
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
 module.exports = {
     addUser,
     addAgent,
@@ -160,6 +206,7 @@ module.exports = {
     getAgent,
     agentDetails,
     createRequest,
-    showUserRequests
+    showUserRequests,
+    acceptRejectHandler
 
 };

@@ -12,7 +12,8 @@ const {
     getAgent,
     agentDetails,
     createRequest,
-    showUserRequests
+    showUserRequests,
+    acceptRejectHandler
 } = require('../controller/controller');
 
 // Routes for adding user and agent
@@ -33,5 +34,8 @@ router.post('/request-verification',createRequest)
 
 //for showing the request done by user to agent
 router.get('/verificationRequests',showUserRequests)
+
+//for accepting or rejecting the user request
+router.post('/verificationRequests',acceptRejectHandler)
 
 module.exports = router;
