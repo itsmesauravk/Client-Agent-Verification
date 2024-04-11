@@ -186,8 +186,9 @@ const acceptRejectHandler = async (req, res) => {
             if (!updatedVerifyUser || !updatedRequest || !updatUserProfile ) return res.status(404).json({ message: "User not found" });
             return res.status(200).json({ success: true, message: "User verified successfully" });
         } else {
+            const updatedVerifyUser = await User.findByIdAndUpdate({ _id: user._id }, { verified: "rejected" });
             const updatedRejectRequest = await VerifyUser.findByIdAndUpdate({ _id: request._id }, { status: 'rejected' });
-            if (!updatedRejectRequest) return res.status(404).json({ message: "Request not found" });
+            if (!updatedVerifyUser || !updatedRejectRequest) return res.status(404).json({ message: "User not found" });
             return res.status(200).json({ success: true, message: "Request rejected successfully" });        
         }
 
